@@ -9,3 +9,4 @@ For NLP Course
 #### 【Lecture02】
 +  [课上代码复写:language 1-Gram/2-Gram](https://github.com/telnetning/AI-For-NLP/blob/master/Lecture02/Course_Content.ipynb)
 +  [维基中文作为数据源](https://github.com/telnetning/AI-For-NLP/blob/master/Lecture02/Zhwiki_As_Source_Data.ipynb)
++  [问和答](https://github.com/telnetning/AI-For-NLP/blob/master/Lecture02/Questions.md)
