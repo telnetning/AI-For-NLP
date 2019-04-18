@@ -14,7 +14,15 @@ alias_names = ["one", "two", "four", "five", "six", "seven", "eight", "nine",
                "ten", "thirteen", "thirteen", "fifteen", "bt", "cp", "yz",
                "dx", "fs", "jc"]
 
-lines = []
+'''
+lines 存放所有的线路
+结构：键值对，{'5号线': SubwayLineObject}
+
+stations 存放所有的站点
+结构：键值对，{'回龙观': StationObject}
+'''
+LINES = {}
+STATIONS = {}
 
 def init_lines():
     '''
@@ -47,36 +55,30 @@ def init_lines():
         for tr in all_trs[2:]:
             partition_name = tr.th.text.split('――')[0]
             pattern_distance = tr.td.text
-            stations.append(Station(partition_name))
+            stations.append(partition_name)
             distances.append(pattern_distance)
-        stations.append(Station(all_trs[len(all_trs) - 1]
-                        .th.text.split('――')[1]))
+        stations.append(all_trs[len(all_trs) - 1]
+                        .th.text.split('――')[1])
 
         # 判断是否为环线
         is_cycle = False
-        if stations[0].name == stations[-1].name:
+        if stations[0] == stations[-1]:
             is_cycle = True
 
-        lines.append(SubwayLine(line_name, stations, distances, is_cycle))
+        LINES[line_name] = SubwayLine(line_name, name, stations, distances,
+                                        is_cycle)
 
 def init_transferred():
-    '''
-    找到所有的可换乘站，标记
-    因为可换乘点远远少于不可换乘点，因此找到所有的可换乘点，
-    再进行遍历效率比直接遍历效率高
-    :return:
-    '''
-    all_stations_repeated = []
-    for line in lines:
-        for station in line.stations:
-            all_stations_repeated.append(station.name)
+    for line_name, line_info in LINES.items():
+        for station in line_info.stations:
+            if not station in STATIONS.keys():
+                STATIONS[station] = Station(station)
+                STATIONS[station].lines = [line_name]
+            else:
+                if line_name != '2号线' or station != '西直门': # 环线特殊情况
+                    STATIONS[station].lines.append(line_name)
+                    STATIONS[station].is_transferred = True
 
-    is_transferred = [k for k, v in Counter(all_stations_repeated).items()
-                      if v > 1]
-    # print(is_transferred)
-    # 标记
-    # for station in is_transferred:
-    #    for line in lines:
 
 
 def navigate(start, target):
@@ -88,32 +90,57 @@ def navigate(start, target):
     '''
     pathes = [[start]]
 
-    while pathes:
-        path = pathes[0]
-        current_station = path[-1] # 上一次找到这里了
+    seen_line = []
+
+    while len(pathes) != 0:
+        path = pathes.pop(0)
+        current_station = path[-1]  # 上一次找到这里了
+
+        current_lines = STATIONS[current_station].lines
+
+        # 查看当前 line 是否直达
+        for cl in current_lines:
+            if cl in seen_line: continue
+            if target in LINES[cl].stations:
+                path.append(target)
+                return path
+            else:
+                # 加入该 line 上的所有的换乘点
+                for station in LINES[cl].stations:
+                    if station != current_station and STATIONS[station].is_transferred:
+                        pathes.append(path + [station])
+            seen_line.append(cl)
+
 
 
 class SubwayLine():
-    name = None #
-    alias_name = None # 网页元素中的 table 的 class 名字
-    stations = [] # 所有的站点
-    distances = [] # 站与站之间的距离
-    is_cycle = False # 是否为环线
+    name = None  #
+    alias_name = None  # 网页元素中的 table 的 class 名字
+    stations = []  # 所有的站点
+    distances = []  # 站与站之间的距离
+    is_cycle = False  # 是否为环线
 
-    def __init__(self, alias_name, stations, distances, is_cycle):
+    def __init__(self, name, alias_name, stations, distances, is_cycle):
+        self.name = name
         self.alias_name = alias_name
         self.stations = stations
         self.distances = distances
         self.is_cycle = is_cycle
 
+
 class Station():
     name = None
-    is_transferred = False # 该站是否可换乘
-    lines = None # 该站在哪些线路上
+    is_transferred = False  # 该站是否可换乘
+    lines = []  # 该站在哪些线路上, 字符串列表
 
     def __init__(self, name):
         self.name = name
 
+
 if __name__ == "__main__":
     init_lines()
     init_transferred()
+    print("\n最小换乘：")
+    print('回龙观\tTO\t西红门:\t' + str('\t->\t'.join(navigate('回龙观', '西红门'))))
+    print('苏州街\tTO\t顺义:\t' + str('\t->\t'.join(navigate('苏州街', '顺义'))))
+    print('安河桥北\tTO\t东单:\t' + str('\t->\t'.join(navigate('安河桥北', '东单'))))
