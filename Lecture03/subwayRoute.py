@@ -14,9 +14,6 @@ alias_names = ["one", "two", "four", "five", "six", "seven", "eight", "nine",
                "ten", "thirteen", "thirteen", "fifteen", "bt", "cp", "yz",
                "dx", "fs", "jc"]
 
-proxies = {'http': 'http://10.40.95.45:3128',
-           'https': 'http://10.40.95.45:3128'}
-
 lines = []
 
 def init_lines():
@@ -24,7 +21,7 @@ def init_lines():
     爬取网页信息，初始化 lines
     :return:
     '''
-    res = requests.get(INFO_URL, headers = HEADERS, proxies = proxies)
+    res = requests.get(INFO_URL, headers = HEADERS)
     encoding_type = chardet.detect(res.content)
     res.encoding = encoding_type["encoding"]
     soup = BeautifulSoup(res.text, 'lxml')
