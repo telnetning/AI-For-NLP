@@ -11,8 +11,11 @@ INFO_URL = "http://www.bjsubway.com/station/zjgls/#"
 HEADERS = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36'}
 
 alias_names = ["one", "two", "four", "five", "six", "seven", "eight", "nine",
-               "ten", "thirteen", "thirteen", "fifteen", "bt", "cp", "yz",
+               "ten", "thirteen", "fourteen", "fifteen", "bt", "cp", "yz",
                "dx", "fs", "jc"]
+
+proxies = {'http': 'http://10.40.95.45:3128',
+           'https': 'http://10.40.95.45:3128'}
 
 '''
 lines 存放所有的线路
@@ -29,7 +32,7 @@ def init_lines():
     爬取网页信息，初始化 lines
     :return:
     '''
-    res = requests.get(INFO_URL, headers = HEADERS)
+    res = requests.get(INFO_URL, headers = HEADERS, proxies = proxies)
     encoding_type = chardet.detect(res.content)
     res.encoding = encoding_type["encoding"]
     soup = BeautifulSoup(res.text, 'lxml')
@@ -56,7 +59,7 @@ def init_lines():
             partition_name = tr.th.text.split('――')[0]
             pattern_distance = tr.td.text
             stations.append(partition_name)
-            distances.append(pattern_distance)
+            distances.append(int(pattern_distance))
         stations.append(all_trs[len(all_trs) - 1]
                         .th.text.split('――')[1])
 
@@ -81,20 +84,20 @@ def init_transferred():
 
 
 
-def navigate(start, target):
+def navigate(start, target, strategy = None):
     '''
     导航
     :param start: 起点
     :param target: 终点
     :return:
     '''
-    pathes = [[start]]
+    pathes = [[Path(end=start)]]
 
     seen_line = []
 
     while len(pathes) != 0:
         path = pathes.pop(0)
-        current_station = path[-1]  # 上一次找到这里了
+        current_station = path[-1].end  # 上一次找到这里了
 
         current_lines = STATIONS[current_station].lines
 
@@ -102,15 +105,16 @@ def navigate(start, target):
         for cl in current_lines:
             if cl in seen_line: continue
             if target in LINES[cl].stations:
-                path.append(target)
+                path.append(Path(start=current_station, end=target, line=cl))
                 return path
             else:
                 # 加入该 line 上的所有的换乘点
                 for station in LINES[cl].stations:
                     if station != current_station and STATIONS[station].is_transferred:
-                        pathes.append(path + [station])
+                        pathes.append(path + [Path(start=current_station, end=station, line=cl)])
             seen_line.append(cl)
-
+        if strategy:
+            pathes = sorted(pathes, key=strategy)
 
 
 class SubwayLine():
@@ -137,10 +141,69 @@ class Station():
         self.name = name
 
 
+class Path():
+    start = None
+    end = None
+    line = None
+    distance = None
+
+    def __init__(self, start='', end='', line=''):
+        self.start = start
+        self.end = end
+        self.line = line
+        if start and end and line:
+            self.cal_distance()
+
+    def cal_distance(self):
+        line_object = LINES[self.line]
+        start_index = line_object.stations.index(self.start)
+        end_index = line_object.stations.index(self.end)
+        if line_object.is_cycle:
+            # 环路存在两条路径，取最小
+            self.distance = min(
+                                sum(line_object.distances[start_index:end_index]),
+                                sum(line_object.distances[end_index:start_index])
+                               )
+        else:
+            if end_index > start_index:
+                self.distance = sum(line_object.distances[start_index:end_index])
+            else:
+                self.distance = sum(line_object.distances[end_index:start_index])
+
+def printRoute(route):
+    '''
+    传入的是 Path 对象列表
+    :return:
+    '''
+    # for path in route:
+    #    print("\t\t{}: {} -> {}".format(path.line, path.start, path.end))
+
+    return '\n'.join([str("\t\t{}: {} -> {}".format(path.line, path.start, path.end)) for path in route[1:]])
+
+def calAllDistances(pathes):
+    '''
+    传入某条换乘方案，计算其总路程
+    :return:
+    '''
+    return sum([path.distance for path in pathes[1:]])
+
 if __name__ == "__main__":
     init_lines()
     init_transferred()
-    print("\n最小换乘：")
-    print('回龙观\tTO\t西红门:\t' + str('\t->\t'.join(navigate('回龙观', '西红门'))))
-    print('苏州街\tTO\t顺义:\t' + str('\t->\t'.join(navigate('苏州街', '顺义'))))
-    print('安河桥北\tTO\t东单:\t' + str('\t->\t'.join(navigate('安河桥北', '东单'))))
+    print("\n默认路径：")
+    print('回龙观\tTO\t西红门:\n' + printRoute(navigate('回龙观', '西红门')))
+    print('苏州街\tTO\t顺义:\n' + printRoute(navigate('苏州街', '顺义')))
+    print('安河桥北\tTO\t东单:\n' + printRoute(navigate('安河桥北', '东单')))
+    print('七里庄\tTO\t丰台站:\n' + printRoute(navigate('七里庄', '丰台站')))
+
+    print("\n最少换乘：")
+    print('回龙观\tTO\t西红门:\n' + printRoute(navigate('回龙观', '西红门', strategy=lambda x : len(x))))
+    print('苏州街\tTO\t顺义:\n' + printRoute(navigate('苏州街', '顺义', strategy=lambda x : len(x))))
+    print('安河桥北\tTO\t东单:\n' + printRoute(navigate('安河桥北', '东单', strategy=lambda x : len(x))))
+    print('七里庄\tTO\t丰台站:\n' + printRoute(navigate('七里庄', '丰台站', strategy=lambda x : len(x))))
+
+    print("\n最短距离：")
+    print('回龙观\tTO\t西红门:\n' + printRoute(navigate('回龙观', '西红门', strategy=lambda x : calAllDistances(x))))
+    print('苏州街\tTO\t顺义:\n' + printRoute(navigate('苏州街', '顺义', strategy=lambda x : calAllDistances(x))))
+    print('安河桥北\tTO\t东单:\n' + printRoute(navigate('安河桥北', '东单', strategy=lambda x : calAllDistances(x))))
+    print('七里庄\tTO\t丰台站:\n' + printRoute(navigate('七里庄', '丰台站', strategy=lambda x : calAllDistances(x))))
