@@ -5,7 +5,6 @@ import requests
 import chardet
 import re
 from bs4 import BeautifulSoup
-from collections import Counter
 
 INFO_URL = "http://www.bjsubway.com/station/zjgls/#"
 HEADERS = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36'}
@@ -13,9 +12,6 @@ HEADERS = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/5
 alias_names = ["one", "two", "four", "five", "six", "seven", "eight", "nine",
                "ten", "thirteen", "fourteen", "fifteen", "bt", "cp", "yz",
                "dx", "fs", "jc"]
-
-proxies = {'http': 'http://10.40.95.45:3128',
-           'https': 'http://10.40.95.45:3128'}
 
 '''
 lines 存放所有的线路
@@ -32,7 +28,7 @@ def init_lines():
     爬取网页信息，初始化 lines
     :return:
     '''
-    res = requests.get(INFO_URL, headers = HEADERS, proxies = proxies)
+    res = requests.get(INFO_URL, headers = HEADERS)
     encoding_type = chardet.detect(res.content)
     res.encoding = encoding_type["encoding"]
     soup = BeautifulSoup(res.text, 'lxml')
@@ -45,13 +41,11 @@ def init_lines():
         else:
             line_table = soup.find_all('table', class_ = name)[0]
 
-        # get line name
+        # 获取线路名字
         pattern = r"^.*线"
         line_name = re.search(pattern, line_table.tr.td.text).group(0)
-        # print(line_name)
-        # print("======{}======".format(line_table.tr.td.text))
 
-        # get stations and distances
+        # 获取站和站间距
         stations = []
         distances = []
         all_trs = line_table.find_all('tr')
@@ -178,7 +172,8 @@ def printRoute(route):
     # for path in route:
     #    print("\t\t{}: {} -> {}".format(path.line, path.start, path.end))
 
-    return '\n'.join([str("\t\t{}: {} -> {}".format(path.line, path.start, path.end)) for path in route[1:]])
+    return '\t\t'.join([str("\t\t{}: {} -> {}".format(path.line, path.start,
+                                                      path.end)) for path in route[1:]])
 
 def calAllDistances(pathes):
     '''
@@ -187,23 +182,99 @@ def calAllDistances(pathes):
     '''
     return sum([path.distance for path in pathes[1:]])
 
+def comprehensiveDisAndStaNums (pathes):
+    '''
+    根据总路程和换乘站比较
+    总路程大约区间：1000-10000 权值设置成 1/1000
+    换乘站差值大约区间：1-2 权值设置成 5
+    :return:
+    '''
+    all_distance = sum([path.distance for path in pathes[1:]])
+    all_station = len(pathes)
+    return all_distance * 1/10000 + all_station * 5
+
 if __name__ == "__main__":
     init_lines()
     init_transferred()
-    print("\n默认路径：")
-    print('回龙观\tTO\t西红门:\n' + printRoute(navigate('回龙观', '西红门')))
-    print('苏州街\tTO\t顺义:\n' + printRoute(navigate('苏州街', '顺义')))
-    print('安河桥北\tTO\t东单:\n' + printRoute(navigate('安河桥北', '东单')))
-    print('七里庄\tTO\t丰台站:\n' + printRoute(navigate('七里庄', '丰台站')))
+    print('\n回龙观 TO 西红门:')
+    print("默认路径：")
+    print(printRoute(navigate('回龙观', '西红门')))
+    print("最少换乘：")
+    print(printRoute(navigate('回龙观', '西红门', strategy=lambda x : len(x))))
+    print("最短距离：")
+    print(printRoute(navigate('回龙观', '西红门', strategy=lambda x : calAllDistances(x))))
+    print("综合考虑：")
+    print(printRoute(navigate('回龙观', '西红门', strategy=lambda x : comprehensiveDisAndStaNums(x))))
 
-    print("\n最少换乘：")
-    print('回龙观\tTO\t西红门:\n' + printRoute(navigate('回龙观', '西红门', strategy=lambda x : len(x))))
-    print('苏州街\tTO\t顺义:\n' + printRoute(navigate('苏州街', '顺义', strategy=lambda x : len(x))))
-    print('安河桥北\tTO\t东单:\n' + printRoute(navigate('安河桥北', '东单', strategy=lambda x : len(x))))
-    print('七里庄\tTO\t丰台站:\n' + printRoute(navigate('七里庄', '丰台站', strategy=lambda x : len(x))))
+    print('\n苏州街 TO 顺义:')
+    print("默认路径：")
+    print(printRoute(navigate('苏州街', '顺义')))
+    print("最少换乘：")
+    print(printRoute(navigate('苏州街', '顺义', strategy=lambda x : len(x))))
+    print("最短距离：")
+    print(printRoute(navigate('苏州街', '顺义', strategy=lambda x :
+    calAllDistances(x))))
+    print("综合考虑：")
+    print(printRoute(navigate('苏州街', '顺义', strategy=lambda x :
+    comprehensiveDisAndStaNums(x))))
 
-    print("\n最短距离：")
-    print('回龙观\tTO\t西红门:\n' + printRoute(navigate('回龙观', '西红门', strategy=lambda x : calAllDistances(x))))
-    print('苏州街\tTO\t顺义:\n' + printRoute(navigate('苏州街', '顺义', strategy=lambda x : calAllDistances(x))))
-    print('安河桥北\tTO\t东单:\n' + printRoute(navigate('安河桥北', '东单', strategy=lambda x : calAllDistances(x))))
-    print('七里庄\tTO\t丰台站:\n' + printRoute(navigate('七里庄', '丰台站', strategy=lambda x : calAllDistances(x))))
+    print('\n七里庄 TO 丰台站:')
+    print("默认路径：")
+    print(printRoute(navigate('七里庄', '丰台站')))
+    print("最少换乘：")
+    print(printRoute(navigate('七里庄', '丰台站', strategy=lambda x : len(x))))
+    print("最短距离：")
+    print(printRoute(navigate('七里庄', '丰台站', strategy=lambda x : len(x))))
+    print("综合考虑：")
+    print(printRoute(navigate('七里庄', '丰台站', strategy=lambda x :
+    comprehensiveDisAndStaNums(x))))
+
+'''
+OUTPUT:
+回龙观 TO 西红门:
+默认路径：
+		13号线: 回龙观 -> 西直门				4号线: 西直门 -> 公益西桥				大兴线: 公益西桥 -> 西红门
+最少换乘：
+		13号线: 回龙观 -> 西直门				4号线: 西直门 -> 公益西桥				大兴线: 公益西桥 -> 西红门
+最短距离：
+		13号线: 回龙观 -> 知春路				10号线: 知春路 -> 海淀黄庄				4号线: 海淀黄庄 -> 公益西桥				大兴线: 公益西桥 -> 西红门
+综合考虑：
+		13号线: 回龙观 -> 西直门				4号线: 西直门 -> 公益西桥				大兴线: 公益西桥 -> 西红门
+
+苏州街 TO 顺义:
+默认路径：
+		10号线: 苏州街 -> 知春路				13号线: 知春路 -> 望京西				15号线: 望京西 -> 顺义
+最少换乘：
+		10号线: 苏州街 -> 知春路				13号线: 知春路 -> 望京西				15号线: 望京西 -> 顺义
+最短距离：
+		10号线: 苏州街 -> 北土城				8号线: 北土城 -> 奥林匹克公园				15号线: 奥林匹克公园 -> 顺义
+综合考虑：
+		10号线: 苏州街 -> 北土城				8号线: 北土城 -> 奥林匹克公园				15号线: 奥林匹克公园 -> 顺义
+
+七里庄 TO 丰台站:
+默认路径：
+		9号线: 七里庄 -> 六里桥				10号线: 六里桥 -> 丰台站
+最少换乘：
+		9号线: 七里庄 -> 六里桥				10号线: 六里桥 -> 丰台站
+最短距离：
+		9号线: 七里庄 -> 六里桥				10号线: 六里桥 -> 丰台站
+综合考虑：
+		14号线: 七里庄 -> 西局				10号线: 西局 -> 丰台站
+'''
+
+'''
+分析：
+默认路径通过 BFS 计算，其结果和最少换乘的结果始终一致。
+详细结果分析：
+1) 回龙观 -> 西红门
+    百度地图推荐最优方案：和 默认路径、最小换乘、综合考虑的方案相同，和最短路径的方案不同
+    不同的原因是 最短距离 只是在中间状态时进行 path 的比较，不代表最终状态，可能导致得到的最短距离路径实际不是。
+
+2) 苏州街 -> 顺义
+    百度地图推荐最优方案：和 最短距离、综合考虑的方案相同，和默认路径、最小换乘路径不同
+    原因在于 最小换乘不考虑路程，优先搜索到了一个非最优解。
+
+3）七里庄 -> 丰台站
+    百度推荐最优方案：和 综合考虑 的方案相同，和最小换乘、最短距离方案不同
+    原因还是淡村值考虑最小换乘或者距离都容易导致优先搜索到非最优解。
+'''
