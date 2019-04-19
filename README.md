@@ -14,4 +14,4 @@ For NLP Course
 #### 【Lecture03】
 +  [课上代码复写 Titanic: Random/Supervisor/Derivate](https://github.com/telnetning/AI-For-NLP/blob/master/Lecture03/Titanic/Titanic.py)
 +  [北京地铁路线规划](https://github.com/telnetning/AI-For-NLP/blob/master/Lecture03/subwayRoute.py)
-+  [问和答](https://github.com/telnetning/AI-For-NLP/blob/master/Lecture03/Questions.md))
++  [问和答](https://github.com/telnetning/AI-For-NLP/blob/master/Lecture03/Questions.md)
