@@ -61,3 +61,19 @@ print(parse_solution(15, solution)) # [2,3,10]
 2. 缓存子问题的解
 3. 实现socution
 """
+
+solution = {}
+
+def rr(n):
+    """
+    :param n:
+    :return:
+    """
+    max_price, split_point = max([(prices[n],0)] + [(rr(n-i) + rr(i), i) for i in range(1, n)],
+                                 key= lambda x : x[0])
+
+    solution[n] = (split_point, n - split_point)
+    return max_price
+
+print(rr(10))
+print(solution)
