@@ -15,3 +15,8 @@ For NLP Course
 +  [课上代码复写 Titanic: Random/Supervisor/Derivate](https://github.com/telnetning/AI-For-NLP/blob/master/Lecture03/Titanic/Titanic.py)
 +  [北京地铁路线规划](https://github.com/telnetning/AI-For-NLP/blob/master/Lecture03/subwayRoute.py)
 +  [问和答](https://github.com/telnetning/AI-For-NLP/blob/master/Lecture03/Questions.md)
+
+#### 【Lecture04】
++  [课上代码复写 Cutting Problems](https://github.com/telnetning/AI-For-NLP/blob/master/Lecture04/Cutting.py)
++  [Edit Distance](https://github.com/telnetning/AI-For-NLP/blob/master/Lecture04/Edit_Distance.py)
++  [问和答](https://github.com/telnetning/AI-For-NLP/blob/master/Lecture04/Questions.md)
